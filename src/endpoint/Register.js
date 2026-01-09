@@ -59,7 +59,7 @@ function Register() {
 
     setIsLoading(true);
 
-    fetch('http://18.217.29.216:8000/register', {
+    fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password })
