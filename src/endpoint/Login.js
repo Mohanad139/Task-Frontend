@@ -63,7 +63,7 @@ function Login() {
         <div className="text-center mb-8">
           <div className="inline-block">
             <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-              TaskFlow
+              MoTask
             </h1>
             <p className="text-gray-600 text-sm">Organize. Collaborate. Achieve.</p>
           </div>
@@ -189,7 +189,7 @@ function Login() {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">New to TaskFlow?</span>
+              <span className="px-4 bg-white text-gray-500">New to MoTask?</span>
             </div>
           </div>
 
@@ -209,7 +209,7 @@ function Login() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">
-          <p>© 2024 TaskFlow. All rights reserved.</p>
+          <p>© 2026 MoTask. All rights reserved.</p>
         </div>
       </div>
     </div>

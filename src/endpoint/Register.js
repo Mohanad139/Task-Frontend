@@ -113,7 +113,7 @@ function Register() {
         <div className="text-center mb-8">
           <div className="inline-block">
             <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              TaskFlow
+              MoTask
             </h1>
             <p className="text-gray-600 text-sm">Start organizing your work today</p>
           </div>
@@ -362,7 +362,7 @@ function Register() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600">
-          <p>© 2024 TaskFlow. All rights reserved.</p>
+          <p>© 2026 MoTask. All rights reserved.</p>
         </div>
       </div>
     </div>
