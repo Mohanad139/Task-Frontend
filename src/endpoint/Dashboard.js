@@ -269,7 +269,7 @@ function Dashboard() {
             <button 
               onClick={() => {
                 // Navigate to first team's projects if teams exist
-                fetch('http://18.217.29.216:8000/teams', {
+                fetch('https://task-management-api-production-a18c.up.railway.app/teams', {
                   headers: { Authorization: `Bearer ${token}` }
                 })
                   .then(res => res.json())
@@ -294,7 +294,7 @@ function Dashboard() {
             <button 
               onClick={() => {
                 // Navigate to first project's tasks if projects exist
-                fetch('http://18.217.29.216:8000/teams', {
+                fetch('https://task-management-api-production-a18c.up.railway.app/teams', {
                   headers: { Authorization: `Bearer ${token}` }
                 })
                   .then(res => res.json())
@@ -307,7 +307,7 @@ function Dashboard() {
                     }
                     
                     // Get projects from first team
-                    return fetch(`http://18.217.29.216:8000/teams/${teams[0][0]}/projects`, {
+                    return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teams[0][0]}/projects`, {
                       headers: { Authorization: `Bearer ${token}` }
                     })
                       .then(res => res.json())
