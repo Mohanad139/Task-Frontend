@@ -38,7 +38,7 @@ function Tasks() {
   const [commentEditText, setCommentEditText] = useState('');
 
   const fetchTasks = () => {
-    return fetch(`http://18.217.29.216:8000/projects/${projectId}/tasks`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}/tasks`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -52,7 +52,7 @@ function Tasks() {
   useEffect(() => {
     if (!projectId) return;
     
-    fetch(`http://18.217.29.216:8000/projects/${projectId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -63,7 +63,7 @@ function Tasks() {
         setTeamId(tid);
         setProjectName(pname);
         
-        return fetch(`http://18.217.29.216:8000/teams/${tid}/members`, {
+        return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${tid}/members`, {
           headers: { Authorization: `Bearer ${token}` }
         });
       })
@@ -86,7 +86,7 @@ function Tasks() {
       return;
     }
 
-    fetch(`http://18.217.29.216:8000/projects/${projectId}/tasks`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}/tasks`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ function Tasks() {
   const deleteTask = (taskId) => {
     if (!window.confirm('Delete this task?')) return;
 
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -127,7 +127,7 @@ function Tasks() {
   };
 
   const saveEdit = (taskId) => {
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ function Tasks() {
   const cancelEdit = () => setEditingId(null);
 
   const fetchAssignees = (taskId) => {
-    return fetch(`http://18.217.29.216:8000/tasks/${taskId}/assignees`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assignees`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -165,7 +165,7 @@ function Tasks() {
   const assignUser = (taskId) => {
     if (!selectedUserId) return;
 
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}/assign`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assign`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ function Tasks() {
   };
 
   const unassignUser = (taskId, userId) => {
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}/unassign/${userId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/unassign/${userId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -188,7 +188,7 @@ function Tasks() {
   };
 
   const fetchComments = (taskId) => {
-    return fetch(`http://18.217.29.216:8000/tasks/${taskId}/comments`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/comments`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -214,7 +214,7 @@ function Tasks() {
   const addComment = (taskId) => {
     if (!commentText.trim()) return;
 
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}/comments`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/comments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ function Tasks() {
   };
 
   const saveEditComment = (taskId, commentId) => {
-    fetch(`http://18.217.29.216:8000/comments/${commentId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/comments/${commentId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ function Tasks() {
   const deleteComment = (taskId, commentId) => {
     if (!window.confirm('Delete this comment?')) return;
 
-    fetch(`http://18.217.29.216:8000/comments/${commentId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/comments/${commentId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })

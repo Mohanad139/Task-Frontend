@@ -8,7 +8,7 @@ function TaskAssign({ taskId, teamId }) {
   const [userId, setUserId] = useState("");
 
   const fetchAssignees = () => {
-    return fetch(`http://18.217.29.216:8000/tasks/${taskId}/assignees`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assignees`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -16,7 +16,7 @@ function TaskAssign({ taskId, teamId }) {
   };
 
   const fetchTeamMembers = () => {
-    return fetch(`http://18.217.29.216:8000/teams/${teamId}/members`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/members`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -30,7 +30,7 @@ function TaskAssign({ taskId, teamId }) {
   }, [taskId, teamId, token]);
 
   const assignUser = () => {
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}/assignees`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assignees`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,7 +46,7 @@ function TaskAssign({ taskId, teamId }) {
   };
 
   const removeAssignee = (uid) => {
-    fetch(`http://18.217.29.216:8000/tasks/${taskId}/assignees/${uid}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assignees/${uid}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` }
     })

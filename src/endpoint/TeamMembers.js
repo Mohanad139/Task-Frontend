@@ -8,7 +8,7 @@ function TeamMembers({ teamId, onClose }) {
   const [selectedRole, setSelectedRole] = useState("member");
 
   const fetchMembers = () => {
-    return fetch(`http://18.217.29.216:8000/teams/${teamId}/members`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/members`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -29,7 +29,7 @@ function TeamMembers({ teamId, onClose }) {
       return;
     }
 
-    fetch(`http://18.217.29.216:8000/teams/${teamId}/members`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/members`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,7 +46,7 @@ function TeamMembers({ teamId, onClose }) {
   };
 
   const updateRole = (userId) => {
-    fetch(`http://18.217.29.216:8000/teams/${teamId}/members/${userId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/members/${userId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -61,7 +61,7 @@ function TeamMembers({ teamId, onClose }) {
   const removeMember = (userId) => {
     if (!window.confirm('Remove this member from the team?')) return;
 
-    fetch(`http://18.217.29.216:8000/teams/${teamId}/members/${userId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/members/${userId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` }
     })

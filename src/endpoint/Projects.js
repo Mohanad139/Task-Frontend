@@ -16,7 +16,7 @@ function Projects() {
   const token = localStorage.getItem('token');
 
   const fetchProjects = () => {
-    return fetch(`http://18.217.29.216:8000/teams/${teamId}/projects`, {
+    return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/projects`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -36,7 +36,7 @@ function Projects() {
       return;
     }
 
-    fetch(`http://18.217.29.216:8000/teams/${teamId}/projects`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamId}/projects`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +57,7 @@ function Projects() {
   const deleteProject = (projectId) => {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
 
-    fetch(`http://18.217.29.216:8000/projects/${projectId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -76,7 +76,7 @@ function Projects() {
   };
 
   const saveEdit = (projectId) => {
-    fetch(`http://18.217.29.216:8000/projects/${projectId}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

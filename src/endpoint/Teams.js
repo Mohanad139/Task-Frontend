@@ -12,7 +12,7 @@ function Teams() {
   const token = localStorage.getItem('token');
 
   const fetchTeams = () => {
-    return fetch('http://18.217.29.216:8000/teams', {
+    return fetch('https://task-management-api-production-a18c.up.railway.app/teams', {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -31,7 +31,7 @@ function Teams() {
       return;
     }
 
-    fetch('http://18.217.29.216:8000/teams', {
+    fetch('https://task-management-api-production-a18c.up.railway.app/teams', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ function Teams() {
   const deleteTeam = (teamID) => {
     if (!window.confirm('Are you sure you want to delete this team?')) return;
 
-    fetch(`http://18.217.29.216:8000/teams/${teamID}`, {
+    fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${teamID}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     })

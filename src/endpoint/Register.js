@@ -59,7 +59,7 @@ function Register() {
 
     setIsLoading(true);
 
-    fetch('/api/register', {
+    fetch('https://task-management-api-production-a18c.up.railway.app/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password })

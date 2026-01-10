@@ -20,7 +20,7 @@ function Login() {
 
     setIsLoading(true);
 
-    fetch('http://18.217.29.216:8000/login', {
+    fetch('https://task-management-api-production-a18c.up.railway.app/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
@@ -33,7 +33,7 @@ function Login() {
     })
     .then(data => {
       localStorage.setItem('token', data.access_token);
-      return fetch('http://18.217.29.216:8000/me', {
+      return fetch('https://task-management-api-production-a18c.up.railway.app/me', {
         headers: { 'Authorization': `Bearer ${data.access_token}` }
       });
     })

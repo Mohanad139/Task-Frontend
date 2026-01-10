@@ -18,7 +18,7 @@ function Dashboard() {
     }
 
     // Fetch teams
-    fetch('http://18.217.29.216:8000/teams', {
+    fetch('https://task-management-api-production-a18c.up.railway.app/teams', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -28,7 +28,7 @@ function Dashboard() {
         
         // Fetch projects for each team
         const projectPromises = teamsData.map(team =>
-          fetch(`http://18.217.29.216:8000/teams/${team[0]}/projects`, {
+          fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${team[0]}/projects`, {
             headers: { Authorization: `Bearer ${token}` }
           })
             .then(res => res.json())
@@ -47,7 +47,7 @@ function Dashboard() {
 
         // Fetch tasks for recent projects
         const taskPromises = allProjects.slice(0, 10).map(project =>
-          fetch(`http://18.217.29.216:8000/projects/${project[0]}/tasks`, {
+          fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${project[0]}/tasks`, {
             headers: { Authorization: `Bearer ${token}` }
           })
             .then(res => res.json())
