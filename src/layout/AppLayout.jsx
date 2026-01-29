@@ -19,16 +19,16 @@ export default function AppLayout({ children, title, subtitle, actions }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-amber-50 to-amber-100/80">
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-6">
               <Link to="/dashboard" className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm font-bold">
+                <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-bold">
                   M
                 </div>
-                <span className="font-semibold text-gray-900">MoTask</span>
+                <span className="font-semibold text-amber-700">MoTask</span>
               </Link>
 
               <nav className="hidden sm:flex items-center gap-1">

@@ -4,10 +4,10 @@ import { cn } from '../../utils/cn';
 import { STATUS } from '../../utils/constants';
 
 const columnStyles = {
-  todo: 'border-t-gray-400',
-  in_progress: 'border-t-amber-400',
-  done: 'border-t-emerald-400',
-  blocked: 'border-t-red-400',
+  todo: '',
+  in_progress: '',
+  done: '',
+  blocked: '',
 };
 
 export function KanbanColumn({ id, children, tasks = [] }) {
@@ -17,9 +17,9 @@ export function KanbanColumn({ id, children, tasks = [] }) {
   return (
     <div
       className={cn(
-        'flex flex-col bg-gray-50 rounded-lg border-t-2',
+        'flex flex-col bg-transparent rounded-lg',
         columnStyles[id],
-        isOver && 'bg-gray-100'
+        isOver && 'bg-amber-50/30'
       )}
     >
       <div className="flex items-center justify-between px-3 py-2.5">

@@ -181,7 +181,7 @@ function Teams() {
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   to={`/teams/${team[0]}/projects`}
-                  className="flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                  className="flex items-center justify-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
                 >
                   <FolderIcon className="h-4 w-4" />
                   Projects

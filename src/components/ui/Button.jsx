@@ -1,7 +1,7 @@
 import { cn } from '../../utils/cn';
 
 const variants = {
-  primary: 'bg-gray-900 text-white hover:bg-gray-800 focus:ring-gray-900',
+  primary: 'bg-amber-50 text-amber-700 hover:bg-amber-100 focus:ring-amber-500',
   secondary: 'bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 focus:ring-gray-500',
   ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500',
   danger: 'bg-white text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-500',

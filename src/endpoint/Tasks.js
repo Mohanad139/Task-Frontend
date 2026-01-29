@@ -623,7 +623,7 @@ function Tasks() {
                       <div className="space-y-2">
                         {assignees.map((a, idx) => {
                           const uid = a[1] || a[0];
-                          const label = a[2] || `User ${uid}`;
+                          const label = a[2] || uid;
                           return (
                             <div key={`${uid}-${idx}`} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                               <div className="flex items-center gap-3">

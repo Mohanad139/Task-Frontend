@@ -42,7 +42,7 @@ export function KanbanCard({ task, onEdit, onDelete, onAssign, onComment, onComp
           {task.status !== 'done' && (
             <button
               onClick={(e) => { e.stopPropagation(); onComplete?.(task); }}
-              className="p-1 text-gray-400 hover:text-yellow-500 rounded"
+              className="p-1 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded"
               title="Mark as Complete"
             >
               <CheckIcon className="h-3.5 w-3.5" />

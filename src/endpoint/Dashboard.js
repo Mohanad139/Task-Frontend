@@ -187,7 +187,7 @@ function Dashboard() {
           onClick={() => handleQuickAction('teams')}
           className="flex items-center gap-4 bg-white rounded-lg border border-gray-200 p-4 hover:shadow-card transition-shadow text-left group"
         >
-          <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 group-hover:text-white transition-colors">
+          <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
             <UsersIcon className="h-5 w-5" />
           </div>
           <div>
@@ -199,7 +199,7 @@ function Dashboard() {
           onClick={() => handleQuickAction('projects')}
           className="flex items-center gap-4 bg-white rounded-lg border border-gray-200 p-4 hover:shadow-card transition-shadow text-left group"
         >
-          <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 group-hover:text-white transition-colors">
+          <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
             <FolderIcon className="h-5 w-5" />
           </div>
           <div>
@@ -211,7 +211,7 @@ function Dashboard() {
           onClick={() => handleQuickAction('tasks')}
           className="flex items-center gap-4 bg-white rounded-lg border border-gray-200 p-4 hover:shadow-card transition-shadow text-left group"
         >
-          <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-900 group-hover:text-white transition-colors">
+          <div className="h-10 w-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
             <ClipboardIcon className="h-5 w-5" />
           </div>
           <div>

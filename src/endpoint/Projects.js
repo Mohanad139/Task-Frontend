@@ -284,7 +284,7 @@ function Projects() {
 
                     <Link
                       to={`/projects/${pid}/tasks`}
-                      className="flex items-center justify-center gap-2 w-full bg-gray-900 hover:bg-gray-800 text-white py-2.5 rounded-lg text-sm font-medium transition-colors mb-2"
+                      className="flex items-center justify-center gap-2 w-full bg-amber-50 hover:bg-amber-100 text-amber-700 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2"
                     >
                       View Tasks
                       <ArrowRightIcon className="h-4 w-4" />
