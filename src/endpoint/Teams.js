@@ -36,6 +36,7 @@ function Teams() {
 
   useEffect(() => {
     fetchTeams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const createTeam = async () => {

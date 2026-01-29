@@ -21,6 +21,7 @@ function TeamMembers({ teamId, onClose }) {
   useEffect(() => {
     if (!teamId) return;
     fetchMembers().catch(err => console.error(err));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, token]);
 
   const addMember = () => {

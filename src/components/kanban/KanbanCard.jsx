@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn';
 import { PriorityBadge } from '../ui/Badge';
 import { AvatarGroup } from '../ui/Avatar';
 
-export function KanbanCard({ task, onEdit, onDelete, onAssign, onComment, assignees = [] }) {
+export function KanbanCard({ task, onEdit, onDelete, onAssign, onComment, onComplete, assignees = [] }) {
   const {
     attributes,
     listeners,
@@ -39,6 +39,15 @@ export function KanbanCard({ task, onEdit, onDelete, onAssign, onComment, assign
           {task.title}
         </h4>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {task.status !== 'done' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onComplete?.(task); }}
+              className="p-1 text-gray-400 hover:text-yellow-500 rounded"
+              title="Mark as Complete"
+            >
+              <CheckIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onEdit?.(task); }}
             className="p-1 text-gray-400 hover:text-gray-600 rounded"
@@ -116,6 +125,14 @@ function UserPlusIcon({ className }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   );
 }

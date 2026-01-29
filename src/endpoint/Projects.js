@@ -62,6 +62,7 @@ function Projects() {
   useEffect(() => {
     fetchProjects();
     fetchTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId, token]);
 
   const createProject = async () => {

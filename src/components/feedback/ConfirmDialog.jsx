@@ -86,11 +86,13 @@ export function ConfirmProvider({ children }) {
   const handleConfirm = useCallback(() => {
     state.resolve?.(true);
     setState((s) => ({ ...s, isOpen: false }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.resolve]);
 
   const handleCancel = useCallback(() => {
     state.resolve?.(false);
     setState((s) => ({ ...s, isOpen: false }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.resolve]);
 
   return (

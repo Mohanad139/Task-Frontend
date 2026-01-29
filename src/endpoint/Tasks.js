@@ -87,6 +87,7 @@ function Tasks() {
 
   useEffect(() => {
     fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, token]);
 
   useEffect(() => {
@@ -487,6 +488,7 @@ function Tasks() {
           onDelete={handleDelete}
           onAssign={(task) => openSlideOver(task, 'assign')}
           onComment={(task) => openSlideOver(task, 'comments')}
+          onComplete={(task) => handleStatusChange(task.id, 'done')}
         />
       ) : (
         <div className="space-y-3">

@@ -21,6 +21,7 @@ export function KanbanBoard({
   onDelete,
   onAssign,
   onComment,
+  onComplete,
 }) {
   const [activeId, setActiveId] = useState(null);
 
@@ -116,6 +117,7 @@ export function KanbanBoard({
                 onDelete={onDelete}
                 onAssign={onAssign}
                 onComment={onComment}
+                onComplete={onComplete}
               />
             ))}
           </KanbanColumn>
