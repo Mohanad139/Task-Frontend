@@ -85,7 +85,7 @@ function Register() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-amber-50 text-amber-700 text-xl font-bold mb-4">
+          <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-b from-amber-50/40 via-amber-50 to-amber-100/80 text-amber-700 text-xl font-bold mb-4">
             M
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">MoTask</h1>

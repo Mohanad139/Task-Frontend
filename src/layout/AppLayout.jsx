@@ -25,7 +25,7 @@ export default function AppLayout({ children, title, subtitle, actions }) {
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-6">
               <Link to="/dashboard" className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-bold">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-b from-amber-50/40 via-amber-50 to-amber-100/80 text-amber-700 flex items-center justify-center text-sm font-bold">
                   M
                 </div>
                 <span className="font-semibold text-amber-700">MoTask</span>
