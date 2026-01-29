@@ -1,20 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import AppLayout from '../layout/AppLayout';
+import { KanbanBoard } from '../components/kanban';
+import { Button } from '../components/ui/Button';
+import { Input, Textarea, Select } from '../components/ui/Input';
+import { Avatar } from '../components/ui/Avatar';
+import { StatusBadge, PriorityBadge } from '../components/ui/Badge';
+import { useConfirm } from '../components/feedback/ConfirmDialog';
+import { cn } from '../utils/cn';
+
+const API_BASE = 'https://task-management-api-production-a18c.up.railway.app';
 
 function Tasks() {
   const { projectId } = useParams();
   const token = localStorage.getItem('token');
   const myUserId = Number(localStorage.getItem('user_id'));
+  const { confirm } = useConfirm();
 
   const [tasks, setTasks] = useState([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('todo');
-  const [priority, setPriority] = useState('medium');
-  const [isCreating, setIsCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('taskViewMode') || 'board');
 
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({
+  const [isCreating, setIsCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
     status: 'todo',
@@ -26,44 +35,73 @@ function Tasks() {
   const [teamId, setTeamId] = useState(null);
   const [projectName, setProjectName] = useState('');
 
-  const [assignOpenForTask, setAssignOpenForTask] = useState(null);
-  const [commentsOpenForTask, setCommentsOpenForTask] = useState(null);
+  const [assigneesByTask, setAssigneesByTask] = useState({});
+  const [slideOver, setSlideOver] = useState({ open: false, task: null, tab: 'details' });
 
   const [assignees, setAssignees] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [commentEditText, setCommentEditText] = useState('');
+  const [editForm, setEditForm] = useState(null);
 
-  const fetchTasks = () => {
-    return fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}/tasks`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => setTasks(data.Tasks || []));
+  const transformTask = (t) => ({
+    id: t[0],
+    projectId: t[1],
+    title: t[2],
+    description: t[3],
+    status: t[4],
+    priority: t[5],
+  });
+
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const taskList = (data.Tasks || []).map(transformTask);
+      setTasks(taskList);
+
+      // Fetch assignees for all tasks
+      const assigneesMap = {};
+      await Promise.all(taskList.map(async (task) => {
+        try {
+          const aRes = await fetch(`${API_BASE}/tasks/${task.id}/assignees`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const aData = await aRes.json();
+          assigneesMap[task.id] = aData["Assigned to :"] || [];
+        } catch {
+          assigneesMap[task.id] = [];
+        }
+      }));
+      setAssigneesByTask(assigneesMap);
+    } catch (err) {
+      toast.error('Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    fetchTasks().catch(console.error);
+    fetchTasks();
   }, [projectId, token]);
 
   useEffect(() => {
     if (!projectId) return;
-    
-    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}`, {
+
+    fetch(`${API_BASE}/projects/${projectId}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
         const project = data.message || data;
-        const tid = project[1];
-        const pname = project[2];
-        setTeamId(tid);
-        setProjectName(pname);
-        
-        return fetch(`https://task-management-api-production-a18c.up.railway.app/teams/${tid}/members`, {
+        setTeamId(project[1]);
+        setProjectName(project[2]);
+
+        return fetch(`${API_BASE}/teams/${project[1]}/members`, {
           headers: { Authorization: `Bearer ${token}` }
         });
       })
@@ -71,7 +109,6 @@ function Tasks() {
       .then(data => {
         const list = data.members || [];
         setTeamMembers(list);
-        
         const me = list.find(m => m[0] === myUserId);
         setMyRole(me ? me[2] : null);
       })
@@ -80,698 +117,649 @@ function Tasks() {
 
   const canAssign = myRole === 'owner' || myRole === 'admin';
 
-  const createTask = () => {
-    if (!title.trim()) {
-      alert('Please enter a task title');
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('taskViewMode', mode);
+  };
+
+  const createTask = async () => {
+    if (!createForm.title.trim()) {
+      toast.error('Please enter a task title');
       return;
     }
 
-    fetch(`https://task-management-api-production-a18c.up.railway.app/projects/${projectId}/tasks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ title, description, status, priority, due_date: null })
-    })
-      .then(() => fetchTasks())
-      .then(() => {
-        setTitle('');
-        setDescription('');
-        setStatus('todo');
-        setPriority('medium');
-        setIsCreating(false);
-      })
-      .catch(console.error);
+    try {
+      await fetch(`${API_BASE}/projects/${projectId}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...createForm, due_date: null })
+      });
+      toast.success('Task created');
+      setCreateForm({ title: '', description: '', status: 'todo', priority: 'medium' });
+      setIsCreating(false);
+      fetchTasks();
+    } catch {
+      toast.error('Failed to create task');
+    }
   };
 
-  const deleteTask = (taskId) => {
-    if (!window.confirm('Delete this task?')) return;
+  const handleStatusChange = async (taskId, newStatus) => {
+    const prevTasks = [...tasks];
+    setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
 
-    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(() => fetchTasks())
-      .catch(console.error);
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      await fetch(`${API_BASE}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description,
+          status: newStatus,
+          priority: task.priority,
+          due_date: null
+        })
+      });
+      toast.success('Task updated');
+    } catch {
+      setTasks(prevTasks);
+      toast.error('Failed to update task');
+    }
   };
 
-  const startEdit = (task) => {
-    setEditingId(task[0]);
-    setEditForm({
-      title: task[2] || '',
-      description: task[3] || '',
-      status: task[4] || 'todo',
-      priority: task[5] || 'medium'
+  const handleDelete = async (task) => {
+    const confirmed = await confirm({
+      title: 'Delete Task',
+      message: `Are you sure you want to delete "${task.title}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger'
     });
+
+    if (confirmed) {
+      try {
+        await fetch(`${API_BASE}/tasks/${task.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Task deleted');
+        fetchTasks();
+        if (slideOver.task?.id === task.id) {
+          setSlideOver({ open: false, task: null, tab: 'details' });
+        }
+      } catch {
+        toast.error('Failed to delete task');
+      }
+    }
   };
 
-  const saveEdit = (taskId) => {
-    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ ...editForm, due_date: null })
-    })
-      .then(() => fetchTasks())
-      .then(() => setEditingId(null))
-      .catch(console.error);
+  const openSlideOver = (task, tab = 'details') => {
+    setSlideOver({ open: true, task, tab });
+    setEditForm({ ...task });
+    fetchAssignees(task.id);
+    fetchComments(task.id);
   };
 
-  const cancelEdit = () => setEditingId(null);
-
-  const fetchAssignees = (taskId) => {
-    return fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assignees`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => setAssignees(data["Assigned to :"] || []));
-  };
-
-  const openAssign = (taskId) => {
-    setAssignOpenForTask(taskId);
-    setSelectedUserId('');
-    fetchAssignees(taskId).catch(console.error);
-  };
-
-  const closeAssign = () => {
-    setAssignOpenForTask(null);
+  const closeSlideOver = () => {
+    setSlideOver({ open: false, task: null, tab: 'details' });
     setAssignees([]);
-    setSelectedUserId('');
-  };
-
-  const assignUser = (taskId) => {
-    if (!selectedUserId) return;
-
-    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/assign`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ user_ids: [Number(selectedUserId)] })
-    })
-      .then(() => fetchAssignees(taskId))
-      .then(() => setSelectedUserId(''))
-      .catch(console.error);
-  };
-
-  const unassignUser = (taskId, userId) => {
-    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/unassign/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(() => fetchAssignees(taskId))
-      .catch(console.error);
-  };
-
-  const fetchComments = (taskId) => {
-    return fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/comments`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => setComments(data.Comments || []));
-  };
-
-  const openComments = (taskId) => {
-    setCommentsOpenForTask(taskId);
-    setCommentText('');
-    setEditingCommentId(null);
-    setCommentEditText('');
-    fetchComments(taskId).catch(console.error);
-  };
-
-  const closeComments = () => {
-    setCommentsOpenForTask(null);
     setComments([]);
-    setCommentText('');
-    setEditingCommentId(null);
-    setCommentEditText('');
+    setEditForm(null);
   };
 
-  const addComment = (taskId) => {
-    if (!commentText.trim()) return;
+  const saveEdit = async () => {
+    if (!editForm || !slideOver.task) return;
 
-    fetch(`https://task-management-api-production-a18c.up.railway.app/tasks/${taskId}/comments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ comment: commentText })
-    })
-      .then(() => fetchComments(taskId))
-      .then(() => setCommentText(''))
-      .catch(console.error);
+    try {
+      await fetch(`${API_BASE}/tasks/${slideOver.task.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ ...editForm, due_date: null })
+      });
+      toast.success('Task updated');
+      fetchTasks();
+      setSlideOver(s => ({ ...s, task: { ...s.task, ...editForm } }));
+    } catch {
+      toast.error('Failed to update task');
+    }
   };
 
-  const startEditComment = (c) => {
-    setEditingCommentId(c[0]);
-    setCommentEditText(c[2] || '');
+  const fetchAssignees = async (taskId) => {
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${taskId}/assignees`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setAssignees(data["Assigned to :"] || []);
+    } catch {
+      setAssignees([]);
+    }
   };
 
-  const saveEditComment = (taskId, commentId) => {
-    fetch(`https://task-management-api-production-a18c.up.railway.app/comments/${commentId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ comment: commentEditText })
-    })
-      .then(() => fetchComments(taskId))
-      .then(() => {
-        setEditingCommentId(null);
-        setCommentEditText('');
-      })
-      .catch(console.error);
+  const assignUser = async () => {
+    if (!selectedUserId || !slideOver.task) return;
+
+    try {
+      await fetch(`${API_BASE}/tasks/${slideOver.task.id}/assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ user_ids: [Number(selectedUserId)] })
+      });
+      toast.success('User assigned');
+      fetchAssignees(slideOver.task.id);
+      setSelectedUserId('');
+      fetchTasks();
+    } catch {
+      toast.error('Failed to assign user');
+    }
   };
 
-  const cancelEditComment = () => {
-    setEditingCommentId(null);
-    setCommentEditText('');
+  const unassignUser = async (userId) => {
+    if (!slideOver.task) return;
+
+    try {
+      await fetch(`${API_BASE}/tasks/${slideOver.task.id}/unassign/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('User removed');
+      fetchAssignees(slideOver.task.id);
+      fetchTasks();
+    } catch {
+      toast.error('Failed to remove user');
+    }
   };
 
-  const deleteComment = (taskId, commentId) => {
-    if (!window.confirm('Delete this comment?')) return;
-
-    fetch(`https://task-management-api-production-a18c.up.railway.app/comments/${commentId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(() => fetchComments(taskId))
-      .catch(console.error);
+  const fetchComments = async (taskId) => {
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${taskId}/comments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setComments(data.Comments || []);
+    } catch {
+      setComments([]);
+    }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'todo': 'bg-gray-100 text-gray-700 border-gray-200',
-      'in_progress': 'bg-blue-100 text-blue-700 border-blue-200',
-      'done': 'bg-green-100 text-green-700 border-green-200',
-      'blocked': 'bg-red-100 text-red-700 border-red-200'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-700 border-gray-200';
+  const addComment = async () => {
+    if (!commentText.trim() || !slideOver.task) return;
+
+    try {
+      await fetch(`${API_BASE}/tasks/${slideOver.task.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment: commentText })
+      });
+      toast.success('Comment added');
+      setCommentText('');
+      fetchComments(slideOver.task.id);
+    } catch {
+      toast.error('Failed to add comment');
+    }
   };
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      'low': 'text-gray-600',
-      'medium': 'text-yellow-600',
-      'high': 'text-orange-600',
-      'urgent': 'text-red-600'
-    };
-    return colors[priority] || 'text-gray-600';
+  const deleteComment = async (commentId) => {
+    const confirmed = await confirm({
+      title: 'Delete Comment',
+      message: 'Are you sure you want to delete this comment?',
+      confirmText: 'Delete',
+      variant: 'danger'
+    });
+
+    if (confirmed) {
+      try {
+        await fetch(`${API_BASE}/comments/${commentId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Comment deleted');
+        fetchComments(slideOver.task.id);
+      } catch {
+        toast.error('Failed to delete comment');
+      }
+    }
   };
+
+  const saveEditComment = async (commentId) => {
+    try {
+      await fetch(`${API_BASE}/comments/${commentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ comment: commentEditText })
+      });
+      toast.success('Comment updated');
+      setEditingCommentId(null);
+      setCommentEditText('');
+      fetchComments(slideOver.task.id);
+    } catch {
+      toast.error('Failed to update comment');
+    }
+  };
+
+  const breadcrumb = (
+    <div className="flex items-center gap-2 text-sm mb-4">
+      <Link to="/teams" className="text-gray-500 hover:text-gray-700">Teams</Link>
+      <span className="text-gray-300">/</span>
+      <Link to={`/teams/${teamId}/projects`} className="text-gray-500 hover:text-gray-700">Projects</Link>
+      <span className="text-gray-300">/</span>
+      <span className="text-gray-900 font-medium">Tasks</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link to="/dashboard">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer">
-                  MoTask
-                </h1>
-              </Link>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link 
-                to="/dashboard" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-              >
-                Dashboard
-              </Link>
-              <Link 
-                to="/teams" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-              >
-                Teams
-              </Link>
-              
-              <button 
-                onClick={() => {
-                  localStorage.clear();
-                  window.location.href = '/login';
-                }}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <AppLayout>
+      {breadcrumb}
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-2 text-sm">
-          <Link to="/teams" className="text-gray-500 hover:text-blue-600 transition">Teams</Link>
-          <span className="text-gray-400">/</span>
-          <Link to={`/teams/${teamId}/projects`} className="text-gray-500 hover:text-blue-600 transition">Projects</Link>
-          <span className="text-gray-400">/</span>
-          <span className="text-gray-900 font-semibold">Tasks</span>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">{projectName || 'Tasks'}</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage tasks and track progress</p>
         </div>
-
-        {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">{projectName || `Project ${projectId}`}</h2>
-            <p className="text-gray-600 mt-1">Manage tasks and track progress</p>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => handleViewModeChange('board')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                viewMode === 'board' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+              )}
+            >
+              Board
+            </button>
+            <button
+              onClick={() => handleViewModeChange('list')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+                viewMode === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+              )}
+            >
+              List
+            </button>
           </div>
-          <button
-            onClick={() => setIsCreating(!isCreating)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow-lg transition transform hover:scale-105"
-          >
+          <Button onClick={() => setIsCreating(!isCreating)}>
             {isCreating ? 'Cancel' : '+ New Task'}
-          </button>
+          </Button>
         </div>
+      </div>
 
-        {/* Create Task Form */}
-        {isCreating && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Task</h3>
-            <div className="space-y-4">
+      {isCreating && (
+        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6 animate-fade-in">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Task</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
+              <Input
+                placeholder="Task title"
+                value={createForm.title}
+                onChange={(e) => setCreateForm(f => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+              <Textarea
+                placeholder="Add description..."
+                value={createForm.description}
+                onChange={(e) => setCreateForm(f => ({ ...f, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Design homepage mockup"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                <Select
+                  value={createForm.status}
+                  onChange={(e) => setCreateForm(f => ({ ...f, status: e.target.value }))}
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                  <option value="blocked">Blocked</option>
+                </Select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  placeholder="Add task details..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows="3"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select 
-                    value={status} 
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  >
-                    <option value="todo">Todo</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="done">Done</option>
-                    <option value="blocked">Blocked</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                  <select 
-                    value={priority} 
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={createTask}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
+                <Select
+                  value={createForm.priority}
+                  onChange={(e) => setCreateForm(f => ({ ...f, priority: e.target.value }))}
                 >
-                  Create Task
-                </button>
-                <button
-                  onClick={() => {
-                    setIsCreating(false);
-                    setTitle('');
-                    setDescription('');
-                    setStatus('todo');
-                    setPriority('medium');
-                  }}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg transition"
-                >
-                  Cancel
-                </button>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </Select>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Tasks List */}
-        {tasks.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <div className="bg-gray-100 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No tasks yet</h3>
-              <p className="text-gray-600 mb-6">Create your first task to get started.</p>
-              <button
-                onClick={() => setIsCreating(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition"
+            <div className="flex gap-3">
+              <Button onClick={createTask}>Create Task</Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsCreating(false);
+                  setCreateForm({ title: '', description: '', status: 'todo', priority: 'medium' });
+                }}
               >
-                Create First Task
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="grid grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-gray-100 rounded-lg h-64 animate-pulse" />
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ClipboardIcon className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks yet</h3>
+          <p className="text-sm text-gray-500 mb-4">Create your first task to get started</p>
+          <Button onClick={() => setIsCreating(true)}>Create Task</Button>
+        </div>
+      ) : viewMode === 'board' ? (
+        <KanbanBoard
+          tasks={tasks}
+          assigneesByTask={assigneesByTask}
+          onStatusChange={handleStatusChange}
+          onEdit={(task) => openSlideOver(task, 'details')}
+          onDelete={handleDelete}
+          onAssign={(task) => openSlideOver(task, 'assign')}
+          onComment={(task) => openSlideOver(task, 'comments')}
+        />
+      ) : (
+        <div className="space-y-3">
+          {tasks.map(task => (
+            <div
+              key={task.id}
+              className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-card transition-shadow cursor-pointer"
+              onClick={() => openSlideOver(task)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{task.title}</h4>
+                  {task.description && (
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-1">{task.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={task.status} />
+                  <PriorityBadge priority={task.priority} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Slide-over Panel */}
+      {slideOver.open && slideOver.task && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="absolute inset-0 bg-black/20" onClick={closeSlideOver} />
+          <div className="absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-modal animate-slide-in-right flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Task Details</h2>
+              <button onClick={closeSlideOver} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                <XIcon className="w-5 h-5" />
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tasks.map(task => {
-              const tid = task[0];
 
-              return (
-                <div key={tid} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all">
-                  {editingId === tid ? (
-                    <div className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Task</h3>
-                      <div className="space-y-4">
-                        <input
-                          placeholder="Task Title"
-                          value={editForm.title}
-                          onChange={(e) => setEditForm(p => ({ ...p, title: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                        />
-                        <textarea
-                          placeholder="Description"
-                          value={editForm.description}
-                          onChange={(e) => setEditForm(p => ({ ...p, description: e.target.value }))}
-                          rows="3"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                        />
+            <div className="flex border-b border-gray-200">
+              {['details', 'assign', 'comments'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setSlideOver(s => ({ ...s, tab }))}
+                  className={cn(
+                    'flex-1 px-4 py-2.5 text-sm font-medium transition-colors',
+                    slideOver.tab === tab
+                      ? 'text-gray-900 border-b-2 border-gray-900'
+                      : 'text-gray-500 hover:text-gray-700'
+                  )}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              ))}
+            </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <select
-                            value={editForm.status}
-                            onChange={(e) => setEditForm(p => ({ ...p, status: e.target.value }))}
-                            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                          >
-                            <option value="todo">Todo</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="done">Done</option>
-                            <option value="blocked">Blocked</option>
-                          </select>
-
-                          <select
-                            value={editForm.priority}
-                            onChange={(e) => setEditForm(p => ({ ...p, priority: e.target.value }))}
-                            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                          >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                          </select>
-                        </div>
-
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => saveEdit(tid)}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition"
-                          >
-                            Save Changes
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {slideOver.tab === 'details' && editForm && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
+                    <Input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm(f => ({ ...f, title: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                    <Textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                      rows={4}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                      <Select
+                        value={editForm.status}
+                        onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
+                      >
+                        <option value="todo">To Do</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                        <option value="blocked">Blocked</option>
+                      </Select>
                     </div>
-                  ) : (
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">{task[2]}</h3>
-                          <p className="text-gray-600 mb-3">{task[3] || 'No description'}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(task[4])}`}>
-                              {task[4]}
-                            </span>
-                            <span className={`text-sm font-semibold ${getPriorityColor(task[5])}`}>
-                              {task[5]} priority
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
+                      <Select
+                        value={editForm.priority}
+                        onChange={(e) => setEditForm(f => ({ ...f, priority: e.target.value }))}
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <Button onClick={saveEdit}>Save Changes</Button>
+                    <Button variant="danger" onClick={() => handleDelete(slideOver.task)}>
+                      Delete Task
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => startEdit(task)}
-                          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition"
-                        >
-                          Edit
-                        </button>
+              {slideOver.tab === 'assign' && (
+                <div className="space-y-4">
+                  {canAssign && (
+                    <div className="flex gap-2">
+                      <Select
+                        value={selectedUserId}
+                        onChange={(e) => setSelectedUserId(e.target.value)}
+                        className="flex-1"
+                      >
+                        <option value="">Select member</option>
+                        {teamMembers.map(m => (
+                          <option key={m[0]} value={m[0]}>{m[4]} ({m[5]})</option>
+                        ))}
+                      </Select>
+                      <Button onClick={assignUser}>Assign</Button>
+                    </div>
+                  )}
 
-                        {canAssign && (
-                          <button
-                            onClick={() => openAssign(tid)}
-                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition"
-                          >
-                            Assign
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => openComments(tid)}
-                          className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg font-medium transition"
-                        >
-                          Comments
-                        </button>
-
-                        <button
-                          onClick={() => deleteTask(tid)}
-                          className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-medium transition"
-                        >
-                          Delete
-                        </button>
-                      </div>
-
-                      {/* ASSIGN MODAL */}
-                      {assignOpenForTask === tid && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-                            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
-                              <div className="flex justify-between items-center">
-                                <h3 className="text-2xl font-bold">Assign Users</h3>
-                                <button onClick={closeAssign} className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2">
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Assigned Members</h4>
+                    {assignees.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-6">No assignees yet</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {assignees.map((a, idx) => {
+                          const uid = a[1] || a[0];
+                          const label = a[2] || `User ${uid}`;
+                          return (
+                            <div key={`${uid}-${idx}`} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                              <div className="flex items-center gap-3">
+                                <Avatar name={label} size="sm" />
+                                <span className="text-sm font-medium text-gray-900">{label}</span>
+                              </div>
+                              {canAssign && (
+                                <button
+                                  onClick={() => unassignUser(uid)}
+                                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                                >
+                                  Remove
                                 </button>
-                              </div>
+                              )}
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                <div className="flex gap-3">
-                                  <select
-                                    value={selectedUserId}
-                                    onChange={(e) => setSelectedUserId(e.target.value)}
-                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                  >
-                                    <option value="">Select user</option>
-                                    {teamMembers.map(m => (
-                                      <option key={m[0]} value={m[0]}>
-                                        {m[4]} ({m[5]})
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    onClick={() => assignUser(tid)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"
-                                  >
-                                    Assign
-                                  </button>
-                                </div>
-                              </div>
+              {slideOver.tab === 'comments' && (
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Write a comment..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addComment()}
+                    />
+                    <Button onClick={addComment}>Add</Button>
+                  </div>
 
-                              <div>
-                                <h4 className="font-semibold text-gray-900 mb-3">Assigned Members</h4>
-                                {assignees.length === 0 ? (
-                                  <p className="text-gray-500 text-center py-8">No assignees</p>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {assignees.map((a, idx) => {
-                                      const uid = a[1] || a[0];
-                                      const label = a[2] || `User ${uid}`;
-                                      return (
-                                        <div key={`asg-${uid}-${idx}`} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                                          <span className="font-medium text-gray-900">{label}</span>
-                                          <button
-                                            onClick={() => unassignUser(tid, uid)}
-                                            className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-sm font-medium"
-                                          >
-                                            Remove
-                                          </button>
-                                        </div>
-                                      );
-                                    })}
+                  <div className="space-y-3">
+                    {comments.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-6">No comments yet</p>
+                    ) : (
+                      comments.map(c => {
+                        const cid = c[0];
+                        const text = c[2];
+                        const authorId = c[3];
+                        const authorName = c[4] || 'Unknown';
+                        const canEdit = authorId === myUserId;
+
+                        return (
+                          <div key={cid} className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex items-start gap-3">
+                              <Avatar name={authorName} size="sm" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900">{authorName}</p>
+                                {editingCommentId === cid ? (
+                                  <div className="mt-2 space-y-2">
+                                    <Input
+                                      value={commentEditText}
+                                      onChange={(e) => setCommentEditText(e.target.value)}
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={() => saveEditComment(cid)}>Save</Button>
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => { setEditingCommentId(null); setCommentEditText(''); }}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
                                   </div>
+                                ) : (
+                                  <>
+                                    <p className="text-sm text-gray-600 mt-1">{text}</p>
+                                    <div className="flex gap-3 mt-2">
+                                      {canEdit && (
+                                        <button
+                                          onClick={() => { setEditingCommentId(cid); setCommentEditText(text); }}
+                                          className="text-xs text-gray-500 hover:text-gray-700"
+                                        >
+                                          Edit
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => deleteComment(cid)}
+                                        className="text-xs text-red-500 hover:text-red-700"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </>
                                 )}
                               </div>
                             </div>
-
-                            <div className="border-t p-4 bg-gray-50">
-                              <button onClick={closeAssign} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold">
-                                Close
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      )}
-
-                      {/* COMMENTS MODAL */}
-                      {commentsOpenForTask === tid && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-                            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
-                              <div className="flex justify-between items-center">
-                                <h3 className="text-2xl font-bold">Comments</h3>
-                                <button onClick={closeComments} className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2">
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                              <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
-                                <div className="flex gap-3">
-                                  <input
-                                    placeholder="Write a comment..."
-                                    value={commentText}
-                                    onChange={(e) => setCommentText(e.target.value)}
-                                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                                  />
-                                  <button
-                                    onClick={() => addComment(tid)}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold"
-                                  >
-                                    Add
-                                  </button>
-                                </div>
-                              </div>
-
-                              {comments.length === 0 ? (
-                                <p className="text-gray-500 text-center py-8">No comments yet</p>
-                              ) : (
-                                comments.map(c => {
-                                  const cid = c[0];
-                                  const text = c[2];
-                                  const authorId = c[3];
-                                  const authorName = c[4] || 'Unknown';
-                                  const canEditThis = authorId === myUserId;
-
-                                  return (
-                                    <div key={cid} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                                      <div className="flex items-start gap-3">
-                                        <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-full w-10 h-10 flex items-center justify-center text-white font-bold">
-                                          {authorName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="font-semibold text-gray-900 mb-1">{authorName}</p>
-                                          {editingCommentId === cid ? (
-                                            <div className="space-y-2">
-                                              <input
-                                                value={commentEditText}
-                                                onChange={(e) => setCommentEditText(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                              />
-                                              <div className="flex gap-2">
-                                                <button
-                                                  onClick={() => saveEditComment(tid, cid)}
-                                                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                                                >
-                                                  Save
-                                                </button>
-                                                <button
-                                                  onClick={cancelEditComment}
-                                                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium"
-                                                >
-                                                  Cancel
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <>
-                                              <p className="text-gray-700 mb-2">{text}</p>
-                                              <div className="flex gap-2">
-                                                <button
-                                                  onClick={() => deleteComment(tid, cid)}
-                                                  className="text-red-600 hover:text-red-700 text-sm font-medium"
-                                                >
-                                                  Delete
-                                                </button>
-                                                {canEditThis && (
-                                                  <button
-                                                    onClick={() => startEditComment(c)}
-                                                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
-                                                  >
-                                                    Edit
-                                                  </button>
-                                                )}
-                                              </div>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-
-                            <div className="border-t p-4 bg-gray-50">
-                              <button onClick={closeComments} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold">
-                                Close
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
-        )}
-
-        {/* Back Button */}
-        <div className="mt-8">
-          <Link
-            to={`/teams/${teamId}/projects`}
-            className="inline-flex items-center text-gray-600 hover:text-blue-600 font-medium transition"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Projects
-          </Link>
         </div>
+      )}
+
+      <div className="mt-8">
+        <Link
+          to={`/teams/${teamId}/projects`}
+          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+        >
+          <ArrowLeftIcon className="w-4 h-4 mr-1.5" />
+          Back to Projects
+        </Link>
       </div>
-    </div>
+    </AppLayout>
+  );
+}
+
+function ClipboardIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  );
+}
+
+function XIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
   );
 }
 
